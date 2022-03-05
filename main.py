@@ -21,7 +21,7 @@ for device in device_list:
     response = requests.get(ef_endpoint, params=parameters)
     device_data = response.json()
 
-    # state_of_charge = None
+    msgSent = False
 
     try:
         state_of_charge = device_data["data"]["data"]["socSum"]
@@ -29,28 +29,29 @@ for device in device_list:
     except KeyError:
         socFound = False
 
-    # noinspection PyUnboundLocalVariable
-    if socFound and state_of_charge <= 25:
-        client = Client(config.account_sid, config.auth_token)
+    if socFound:
+        # noinspection PyUnboundLocalVariable
+        if not msgSent and state_of_charge <= 25:
+            client = Client(config.account_sid, config.auth_token)
 
-        message = client.messages.create(
-            body=f"{name} battery level is {state_of_charge}%",
-            from_=config.from_num,
-            to=config.to_num
-        )
+            message = client.messages.create(
+                body=f"{name} battery level is {state_of_charge}% at {time_now}.",
+                from_=config.from_num,
+                to=config.to_num
+            )
 
-        print(message.status)
-    elif socFound and state_of_charge == 100:
-        client = Client(config.account_sid, config.auth_token)
+            print(message.status)
+            msgSent = True
+        elif not msgSent and state_of_charge == 100:
+            client = Client(config.account_sid, config.auth_token)
 
-        message = client.messages.create(
-            body=f"{name} battery level is fully charged.",
-            from_=config.from_num,
-            to=config.to_num
-        )
+            message = client.messages.create(
+                body=f"{name} battery level is fully charged at {time_now}.",
+                from_=config.from_num,
+                to=config.to_num
+            )
 
-        print(message.status)
-    elif socFound:
-        print(f"{name} SoC is {state_of_charge}% at {time_now}.")
-    else:
-        print(f"{name} SoC not found at {time_now}.")
+            print(message.status)
+            msgSent = True
+        elif 25 < state_of_charge < 100:
+            msgSent = False
